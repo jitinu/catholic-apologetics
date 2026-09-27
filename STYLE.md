@@ -294,8 +294,8 @@ case and a technique for exposing hidden assumptions. Borrow:
 
 These mechanics come from philosophy seminars and courtroom cross-examination.
 They are tools for finding the truth of a matter, not for humiliating an
-interlocutor. Use them in the "steel-man and respond" section and in Rebut
-mode.
+interlocutor. Use them in the "steel-man and respond" section when rebutting
+an argument.
 
 1. **Define the terms.** Before evaluating "the Church invented the Bible in
    325," define "invented," "the Bible," and what actually happened in 325

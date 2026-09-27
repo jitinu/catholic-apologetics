@@ -8,9 +8,9 @@ version = "0.1.0"
 description = "Local retrieval-augmented Catholic apologetics Q&A tool"
 requires-python = ">=3.10"
 dependencies = [
-  "anthropic==1.8.0",
   "beautifulsoup4==4.15.0",
   "chromadb==1.5.9",
+  "google-genai>=1.75.0,<2",
   "PyYAML==6.0.3",
   "requests==2.34.2",
   "streamlit==1.64.0",

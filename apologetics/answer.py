@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-import os
 import re
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Literal
 
-import anthropic
+from google import genai
+from google.genai import types
 
 from . import store
-from .config import CLAUDE_MODEL, ROOT_DIR, TOP_K
+from .config import GEMINI_API_KEY, GEMINI_MODEL, ROOT_DIR, TOP_K
 
 
 @dataclass
@@ -48,7 +47,7 @@ def retrieve(question: str, k: int = TOP_K) -> list[Hit]:
     ]
 
 
-def build_user_message(mode: Literal["ask", "rebut"], user_text: str, hits: list[Hit]) -> str:
+def build_user_message(user_text: str, hits: list[Hit]) -> str:
     if hits:
         passages = "\n".join(
             f"[{h.tag}] {h.source_title} — {h.section} ({h.url})\n{h.text}\n" for h in hits
@@ -57,14 +56,7 @@ def build_user_message(mode: Literal["ask", "rebut"], user_text: str, hits: list
         passages = (
             "(No passages retrieved — the local library is empty or returned nothing relevant.)"
         )
-    if mode == "rebut":
-        prompt = (
-            f"Argument to rebut:\n{user_text}\n\n"
-            "Produce a sourced, steel-manned counter-argument following Rebut mode."
-        )
-    else:
-        prompt = f"Question:\n{user_text}"
-    return f"Retrieved passages:\n{passages}\n\n{prompt}"
+    return f"Retrieved passages:\n{passages}\n\nUser input:\n{user_text}"
 
 
 def link_citations(text: str, hits: list[Hit]) -> str:
@@ -81,27 +73,20 @@ def link_citations(text: str, hits: list[Hit]) -> str:
     return re.sub(r"\[(S\d+)\]", repl, text)
 
 
-def sources_table(hits: list[Hit]) -> list[Hit]:
-    return hits
-
-
-def answer(
-    mode: Literal["ask", "rebut"],
-    user_text: str,
-    k: int = TOP_K,
-    client=None,
-) -> Answer:
+def answer(user_text: str, k: int = TOP_K, client=None) -> Answer:
+    if not GEMINI_API_KEY:
+        raise RuntimeError(
+            "GEMINI_API_KEY is not set — get a free key at https://aistudio.google.com/apikey"
+        )
     hits = retrieve(user_text, k)
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        raise RuntimeError("ANTHROPIC_API_KEY is not set")
-    client = client or anthropic.Anthropic()
-    response = client.messages.create(
-        model=CLAUDE_MODEL,
-        max_tokens=4000,
-        system=_system_prompt(),
-        messages=[{"role": "user", "content": build_user_message(mode, user_text, hits)}],
+    client = client or genai.Client(api_key=GEMINI_API_KEY)
+    response = client.models.generate_content(
+        model=GEMINI_MODEL,
+        contents=build_user_message(user_text, hits),
+        config=types.GenerateContentConfig(
+            system_instruction=_system_prompt(),
+            max_output_tokens=4000,
+        ),
     )
-    text = "".join(
-        block.text for block in response.content if getattr(block, "type", "text") == "text"
-    )
-    return Answer(link_citations(text, hits), hits, CLAUDE_MODEL)
+    text = response.text or ""
+    return Answer(link_citations(text, hits), hits, GEMINI_MODEL)

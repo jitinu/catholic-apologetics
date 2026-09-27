@@ -8,10 +8,10 @@ def hits():
 
 
 def test_user_message():
-    message = build_user_message("ask", "What is faith?", hits())
+    message = build_user_message("What is faith?", hits())
     assert "Retrieved passages:" in message
     assert "[S1] Catechism — CCC 27" in message
-    assert "Question:\nWhat is faith?" in message
+    assert "User input:\nWhat is faith?" in message
 
 
 def test_citation_linking():
@@ -23,12 +23,18 @@ def test_citation_linking():
 def test_answer_fake_client(monkeypatch):
     monkeypatch.setattr("apologetics.answer.retrieve", lambda question, k: hits())
     fake = SimpleNamespace(
-        messages=SimpleNamespace(
-            create=lambda **kwargs: SimpleNamespace(
-                content=[SimpleNamespace(type="text", text="Answer [S1]")]
-            )
+        models=SimpleNamespace(
+            generate_content=lambda **kwargs: assert_generate_content_kwargs(kwargs)
         )
     )
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "test")
-    result = answer("ask", "question", client=fake)
+    monkeypatch.setattr("apologetics.answer.GEMINI_API_KEY", "test")
+    result = answer("question", client=fake)
     assert "[S1](https://example.test" in result.text
+
+
+def assert_generate_content_kwargs(kwargs):
+    assert kwargs["model"] == "gemini-2.5-flash"
+    assert kwargs["contents"].endswith("User input:\nquestion")
+    assert kwargs["config"].system_instruction
+    assert kwargs["config"].max_output_tokens == 4000
+    return SimpleNamespace(text="Answer [S1]")
