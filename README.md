@@ -28,10 +28,10 @@ python -m apologetics.ingest
 ```
 
 The first run downloads the sources and the Chroma embedding model and can take
-several minutes depending on network speed. For a quick test:
+on the order of tens of minutes depending on network speed. For a quick test:
 
 ```bash
-python -m apologetics.ingest --only douay-rheims --max-pages 5
+python -m apologetics.ingest --only ccc fathers --max-pages 3
 ```
 
 ## Run

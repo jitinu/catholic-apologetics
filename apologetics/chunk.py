@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import re
 from dataclasses import dataclass
 
 from .parsers import Passage
@@ -18,7 +17,8 @@ def _make_chunk(passages: list[Passage], ordinal: int, section: str | None = Non
     first = passages[0]
     label = section or first.section
     body = "\n".join(
-        f"{p.section.rsplit(' ', 1)[-1]} {p.text}" if ":" in p.section else p.text for p in passages
+        f"{p.section.rsplit(' ', 1)[-1]} {p.text}" if p.kind == "verse" else p.text
+        for p in passages
     )
     text = f"{label}\n{body}"
     digest = hashlib.sha1(f"{first.url}{label}{ordinal}".encode()).hexdigest()[:16]
@@ -42,14 +42,22 @@ def chunk(passages: list[Passage]) -> list[Chunk]:
     current: list[Passage] = []
     current_group = None
     ordinal = 0
+    carried = False
     for passage in passages:
         group = passage.group or passage.section
         if current and group != current_group:
-            result.append(_make_chunk(current, ordinal))
-            ordinal += 1
+            if not (carried and len(current) == 1):
+                label = (
+                    verse_range_label(current[0].section, current[-1].section)
+                    if current[0].kind == "verse"
+                    else None
+                )
+                result.append(_make_chunk(current, ordinal, label))
+                ordinal += 1
             current = []
+            carried = False
         current_group = group
-        bible_group = re_chapter_verse_group(group)
+        bible_group = passage.kind == "verse"
         if (
             current
             and not bible_group
@@ -62,22 +70,19 @@ def chunk(passages: list[Passage]) -> list[Chunk]:
                 current = [passage]
         else:
             current.append(passage)
-        if group and re_chapter_verse_group(group) and len(current) >= 8:
+        if passage.kind == "verse" and len(current) >= 8:
             first, last = current[0], current[-1]
             label = verse_range_label(first.section, last.section)
             result.append(_make_chunk(current, ordinal, label))
             ordinal += 1
             current = [last]
-    if current:
+            carried = True
+    if current and not (carried and len(current) == 1):
         label = None
-        if re_chapter_verse_group(current[0].group or ""):
+        if current[0].kind == "verse":
             label = verse_range_label(current[0].section, current[-1].section)
         result.append(_make_chunk(current, ordinal, label))
     return result
-
-
-def re_chapter_verse_group(value: str) -> bool:
-    return bool(re.match(r".+\s+\d+$", value))
 
 
 def verse_range_label(first: str, last: str) -> str:

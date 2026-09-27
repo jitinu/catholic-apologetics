@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Literal
+
+import anthropic
 
 from . import store
 from .config import CLAUDE_MODEL, ROOT_DIR, TOP_K
@@ -88,10 +91,8 @@ def answer(
     k: int = TOP_K,
     client=None,
 ) -> Answer:
-    import anthropic
-
     hits = retrieve(user_text, k)
-    if not __import__("os").environ.get("ANTHROPIC_API_KEY"):
+    if not os.environ.get("ANTHROPIC_API_KEY"):
         raise RuntimeError("ANTHROPIC_API_KEY is not set")
     client = client or anthropic.Anthropic()
     response = client.messages.create(

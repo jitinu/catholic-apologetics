@@ -24,6 +24,7 @@ class Passage:
     work: str | None = None
     author: str | None = None
     group: str | None = None
+    kind: str = ""
 
 
 def _text(node: Tag) -> str:
@@ -56,27 +57,47 @@ def parse_douay_rheims(
                     source["url"],
                     " ".join(current_text).strip(),
                     group=f"{book} {chapter}",
+                    kind="verse",
                 )
             )
         current_ref, current_text = None, []
 
-    for raw in text.replace("\r\n", "\n").splitlines():
-        line = raw.strip()
-        chapter_match = chapter_re.match(line)
-        verse_match = verse_re.match(line)
+    after_header = False
+    paragraphs = re.split(r"\n\s*\n", text.replace("\r\n", "\n"))
+    for paragraph in paragraphs:
+        lines = [line.strip() for line in paragraph.splitlines() if line.strip()]
+        if not lines:
+            continue
+        index = 0
+        chapter_match = chapter_re.match(lines[0])
         if chapter_match:
             emit()
             book, chapter = chapter_match.groups()
-            continue
-        if verse_match and book and chapter:
-            emit()
-            current_ref = verse_match.group(1) + ":" + verse_match.group(2)
-            current_text = [verse_match.group(3)]
-        elif current_ref and line:
-            current_text.append(f"[Note: {line}]")
-        elif line and verses and book and chapter:
-            verses[-1].text += f" [Note: {line}]"
-        elif not line:
+            after_header = True
+            index = 1
+        verse_found = False
+        while index < len(lines):
+            line = lines[index]
+            verse_match = verse_re.match(line)
+            if verse_match and book and chapter:
+                emit()
+                current_ref = verse_match.group(1) + ":" + verse_match.group(2)
+                current_text = [verse_match.group(3), *lines[index + 1 :]]
+                after_header = False
+                verse_found = True
+                break
+            if after_header:
+                after_header = False
+                index += 1
+                continue
+            if current_ref:
+                current_text.extend(lines[index:])
+                verse_found = True
+                break
+            if verses and book and chapter:
+                verses[-1].text += f" [Note: {' '.join(lines[index:])}]"
+            break
+        if verse_found:
             emit()
     emit()
     return verses
@@ -175,7 +196,7 @@ def parse_newadvent_fathers(
     for landing_url in source.get("urls", []):
         landing_html = content if content is not None else fetch_fn(landing_url, refresh)
         landing = BeautifulSoup(landing_html, "html.parser")
-        code = PathLikeCode(landing_url)
+        code = _page_code(landing_url)
         subpages = _same_prefix_links(landing, landing_url, code)
         pages = subpages or [landing_url]
         if content is not None:
@@ -224,13 +245,24 @@ def parse_newadvent_fathers(
                 )
 
 
-def PathLikeCode(url: str) -> str:
+def _page_code(url: str) -> str:
     name = urlparse(url).path.rsplit("/", 1)[-1]
     code = name.rsplit(".", 1)[0]
     if code:
         return code
     match = re.search(r"(\d+)\.htm", url, re.IGNORECASE)
     return match.group(1) if match else ""
+
+
+def _summa_question_links(soup: BeautifulSoup, index_url: str, part_num: int) -> list[str]:
+    pattern = re.compile(rf"^\.\./summa/{part_num}\d{{3}}\.htm$", re.IGNORECASE)
+    links = []
+    for anchor in soup.find_all("a", href=True):
+        if pattern.match(anchor["href"]):
+            url = urljoin(index_url, anchor["href"])
+            if url not in links:
+                links.append(url)
+    return links
 
 
 def parse_newadvent_summa(
@@ -246,15 +278,9 @@ def parse_newadvent_summa(
     for index_url in source.get("index_urls", []):
         index_html = content if content is not None else fetch_fn(index_url, refresh)
         index = BeautifulSoup(index_html, "html.parser")
-        part_num = int(PathLikeCode(index_url))
+        part_num = int(_page_code(index_url))
         part = part_names.get(part_num, str(part_num))
-        links = []
-        pattern = re.compile(r"^\.\./summa/1\d{3}\.htm$", re.IGNORECASE)
-        for a in index.find_all("a", href=True):
-            if pattern.match(a["href"]):
-                url = urljoin(index_url, a["href"])
-                if url not in links:
-                    links.append(url)
+        links = _summa_question_links(index, index_url, part_num)
         if content is not None or not links:
             links = [index_url]
         for page_url in links:
@@ -319,25 +345,26 @@ def parse_catholic_answers(
         title = _text(h1) if h1 else source["title"]
         author_tag = soup.find("meta", attrs={"name": "author"})
         author = author_tag.get("content") if author_tag else None
-        body = article.find("div", class_="body-half") or article
         current_heading = None
-        for node in body.find_all(["h2", "h3", "p"]):
-            if node.name in {"h2", "h3"}:
-                current_heading = _text(node)
-                continue
-            value = _text(node)
-            if not value:
-                continue
-            section = title + (f" — {current_heading}" if current_heading else "")
-            yield Passage(
-                source["id"],
-                "Catholic Answers",
-                section,
-                url,
-                value,
-                author=author,
-                group=section,
-            )
+        bodies = article.find_all("div", class_="body-half") or [article]
+        for body in bodies:
+            for node in body.find_all(["h2", "h3", "p"]):
+                if node.name in {"h2", "h3"}:
+                    current_heading = _text(node)
+                    continue
+                value = _text(node)
+                if not value:
+                    continue
+                section = title + (f" — {current_heading}" if current_heading else "")
+                yield Passage(
+                    source["id"],
+                    "Catholic Answers",
+                    section,
+                    url,
+                    value,
+                    author=author,
+                    group=section,
+                )
 
 
 PARSERS = {

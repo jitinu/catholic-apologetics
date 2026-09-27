@@ -1,6 +1,9 @@
 from pathlib import Path
 
+from bs4 import BeautifulSoup
+
 from apologetics.parsers import (
+    _summa_question_links,
     parse_catechism_vatican,
     parse_catholic_answers,
     parse_douay_rheims,
@@ -24,7 +27,10 @@ def test_bible_parser():
     )
     assert passages[0].section == "Genesis 1:1"
     assert "In the beginning" in passages[0].text
+    assert "face of the deep" in passages[1].text
+    assert "[Note:" not in passages[1].text
     assert any("[Note:" in p.text for p in passages)
+    assert "God createth" not in passages[-1].text
     assert any(p.section == "Genesis 2:1" for p in passages)
 
 
@@ -65,6 +71,18 @@ def test_summa_parser():
     assert len(passages) == 4
 
 
+def test_summa_links_follow_part_number():
+    soup = BeautifulSoup(
+        '<a href="../summa/2001.htm">Q1</a><a href="../summa/2002.htm">Q2</a>'
+        '<a href="../summa/1001.htm">wrong part</a>',
+        "html.parser",
+    )
+    assert _summa_question_links(soup, "https://www.newadvent.org/summa/2.htm", 2) == [
+        "https://www.newadvent.org/summa/2001.htm",
+        "https://www.newadvent.org/summa/2002.htm",
+    ]
+
+
 def test_catholic_answers_parser():
     passages = list(
         parse_catholic_answers(
@@ -75,3 +93,4 @@ def test_catholic_answers_parser():
     assert passages[0].source_title == "Catholic Answers"
     assert passages[-1].section.endswith("Ignatius of Antioch")
     assert passages[-1].author == "Jimmy Akin"
+    assert any("The Eucharist is not merely" in p.text for p in passages)
