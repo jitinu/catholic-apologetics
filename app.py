@@ -1,10 +1,11 @@
 import json
 
+import requests
 import streamlit as st
 from google.genai import errors
 
 from apologetics.answer import answer
-from apologetics.config import GEMINI_MODEL, MANIFEST, TOP_K
+from apologetics.config import GEMINI_MODEL, LLM_BACKEND, MANIFEST, OLLAMA_MODEL, TOP_K
 
 st.set_page_config(page_title="Catholic Apologetics Q&A", layout="wide")
 
@@ -21,7 +22,8 @@ if "history" not in st.session_state:
 
 with st.sidebar:
     top_k = st.slider("Top-k passages", 4, 15, TOP_K)
-    st.caption(f"Model: {GEMINI_MODEL}")
+    model = GEMINI_MODEL if LLM_BACKEND == "gemini" else OLLAMA_MODEL
+    st.caption(f"Backend: {LLM_BACKEND} · Model: {model}")
     manifest = _manifest()
     if manifest:
         st.subheader("Library status")
@@ -48,5 +50,11 @@ if st.button("Answer"):
                 result = answer(user_text, top_k)
             st.session_state.history.append((user_text, result))
             st.rerun()
-        except (errors.APIError, RuntimeError, OSError, ValueError) as exc:
+        except (
+            errors.APIError,
+            requests.RequestException,
+            RuntimeError,
+            OSError,
+            ValueError,
+        ) as exc:
             st.error(str(exc))
