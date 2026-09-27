@@ -1,0 +1,141 @@
+# Text sources for the local library.
+#
+# Re-run `python -m apologetics.ingest` after editing. Sources whose entry has
+# not changed are skipped; changed or new sources are re-fetched and re-indexed.
+#
+# Fields common to every source:
+#   id      unique slug, used as the Chroma metadata key and cache directory
+#   title   human-readable name used in citations
+#   kind    parser to use (see below)
+#   enabled optional, default true
+#
+# Kinds:
+#   douay_rheims_gutenberg   Project Gutenberg plain-text Douay-Rheims Bible (url)
+#   catechism_vatican        Vatican IntraText CCC; crawls every __P*.HTM page from index_url
+#   newadvent_fathers        New Advent Church Fathers; `urls` are work pages, each
+#                            crawled for same-prefix sub-pages (books/chapters)
+#   newadvent_summa          New Advent Summa; `index_urls` are part indexes
+#                            (1.htm, 2.htm, 3.htm, 4.htm, 5.htm), crawled for question pages
+#   catholic_answers         Catholic Answers tract/magazine/article pages (urls)
+#
+# Optional per-source `max_pages` caps a crawl while testing.
+
+sources:
+  - id: douay-rheims
+    title: Douay-Rheims Bible
+    kind: douay_rheims_gutenberg
+    url: https://www.gutenberg.org/cache/epub/8300/pg8300.txt
+
+  - id: ccc
+    title: Catechism of the Catholic Church
+    kind: catechism_vatican
+    index_url: https://www.vatican.va/archive/ENG0015/_INDEX.HTM
+
+  - id: fathers
+    title: Church Fathers (New Advent)
+    kind: newadvent_fathers
+    urls:
+      - https://www.newadvent.org/fathers/0714.htm   # Didache
+      - https://www.newadvent.org/fathers/1010.htm   # Clement of Rome, Letter to the Corinthians
+      - https://www.newadvent.org/fathers/0104.htm   # Ignatius, Ephesians
+      - https://www.newadvent.org/fathers/0105.htm   # Ignatius, Magnesians
+      - https://www.newadvent.org/fathers/0106.htm   # Ignatius, Trallians
+      - https://www.newadvent.org/fathers/0107.htm   # Ignatius, Romans
+      - https://www.newadvent.org/fathers/0108.htm   # Ignatius, Philadelphians
+      - https://www.newadvent.org/fathers/0109.htm   # Ignatius, Smyrnaeans
+      - https://www.newadvent.org/fathers/0110.htm   # Ignatius, Polycarp
+      - https://www.newadvent.org/fathers/0136.htm   # Polycarp, Philippians
+      - https://www.newadvent.org/fathers/0102.htm   # Martyrdom of Polycarp
+      - https://www.newadvent.org/fathers/0101.htm   # Epistle to Diognetus
+      - https://www.newadvent.org/fathers/0126.htm   # Justin Martyr, First Apology
+      - https://www.newadvent.org/fathers/0127.htm   # Justin Martyr, Second Apology
+      - https://www.newadvent.org/fathers/0128.htm   # Justin Martyr, Dialogue with Trypho
+      - https://www.newadvent.org/fathers/0103.htm   # Irenaeus, Against Heresies
+      - https://www.newadvent.org/fathers/0311.htm   # Tertullian, Prescription Against Heretics
+      - https://www.newadvent.org/fathers/2501.htm   # Eusebius, Church History
+      - https://www.newadvent.org/fathers/2802.htm   # Athanasius, On the Incarnation
+      - https://www.newadvent.org/fathers/3101.htm   # Cyril of Jerusalem, Catechetical Lectures
+      - https://www.newadvent.org/fathers/1101.htm   # Augustine, Confessions
+
+  - id: summa
+    title: Summa Theologiae
+    kind: newadvent_summa
+    index_urls:
+      - https://www.newadvent.org/summa/1.htm   # Prima Pars
+      - https://www.newadvent.org/summa/2.htm   # Prima Secundae
+      - https://www.newadvent.org/summa/3.htm   # Secunda Secundae
+      - https://www.newadvent.org/summa/4.htm   # Tertia Pars
+      - https://www.newadvent.org/summa/5.htm   # Supplement
+
+  - id: catholic-answers
+    title: Catholic Answers
+    kind: catholic_answers
+    urls:
+      - https://www.catholic.com/tract/the-divinity-of-christ
+      - https://www.catholic.com/tract/the-trinity
+      - https://www.catholic.com/tract/god-in-three-persons
+      - https://www.catholic.com/tract/the-one-true-god
+      - https://www.catholic.com/tract/apostolic-tradition
+      - https://www.catholic.com/tract/scripture-and-tradition
+      - https://www.catholic.com/tract/the-old-testament-canon
+      - https://www.catholic.com/tract/proving-inspiration
+      - https://www.catholic.com/tract/the-authority-of-the-pope-part-i
+      - https://www.catholic.com/tract/the-authority-of-the-pope-part-ii
+      - https://www.catholic.com/tract/origins-of-peter-as-pope
+      - https://www.catholic.com/tract/papal-infallibility
+      - https://www.catholic.com/tract/peter-and-the-papacy
+      - https://www.catholic.com/tract/peter-the-rock
+      - https://www.catholic.com/tract/peters-primacy
+      - https://www.catholic.com/tract/peters-roman-residency
+      - https://www.catholic.com/tract/peters-successors
+      - https://www.catholic.com/tract/was-peter-in-rome
+      - https://www.catholic.com/tract/apostolic-succession
+      - https://www.catholic.com/tract/mary-ever-virgin
+      - https://www.catholic.com/tract/mary-full-of-grace
+      - https://www.catholic.com/tract/mary-mother-of-god
+      - https://www.catholic.com/tract/immaculate-conception-and-assumption
+      - https://www.catholic.com/tract/brethren-of-the-lord
+      - https://www.catholic.com/tract/the-intercession-of-the-saints
+      - https://www.catholic.com/tract/praying-to-the-saints
+      - https://www.catholic.com/tract/saint-worship
+      - https://www.catholic.com/tract/relics
+      - https://www.catholic.com/tract/purgatory
+      - https://www.catholic.com/tract/the-roots-of-purgatory
+      - https://www.catholic.com/tract/myths-about-indulgences
+      - https://www.catholic.com/tract/the-real-presence
+      - https://www.catholic.com/tract/christ-in-the-eucharist
+      - https://www.catholic.com/tract/the-sacrifice-of-the-mass
+      - https://www.catholic.com/tract/confession
+      - https://www.catholic.com/tract/the-forgiveness-of-sins
+      - https://www.catholic.com/tract/infant-baptism
+      - https://www.catholic.com/tract/baptism-immersion-only
+      - https://www.catholic.com/tract/assurance-of-salvation
+      - https://www.catholic.com/tract/salvation-outside-the-church
+      - https://www.catholic.com/tract/what-the-early-church-believed-faith-and-works
+      - https://www.catholic.com/tract/what-the-early-church-believed-original-sin
+      - https://www.catholic.com/tract/what-the-early-church-believed-baptismal-regeneration
+      - https://www.catholic.com/tract/is-catholicism-pagan
+      - https://www.catholic.com/tract/the-anti-catholic-bible
+      - https://www.catholic.com/tract/resurrection-of-the-body
+      - https://www.catholic.com/tract/are-catholics-christian
+      - https://www.catholic.com/tract/apologetics-what-is-christian-or-catholic-apologetics
+      - https://www.catholic.com/magazine/print-edition/did-jesus-exist
+      - https://www.catholic.com/magazine/print-edition/are-the-gospels-myth
+      - https://www.catholic.com/magazine/print-edition/explaining-away-jesus-resurrection
+      - https://www.catholic.com/magazine/print-edition/explaining-away-jesus-resurrection-1
+      - https://www.catholic.com/magazine/print-edition/evolution-empty-tomb-apologetics
+      - https://www.catholic.com/magazine/online-edition/why-jesus-resurrection-is-not-borrowed-from-pagan-myths
+      - https://www.catholic.com/magazine/online-edition/why-the-resurrection-was-not-a-conspiracy
+      - https://www.catholic.com/magazine/online-edition/the-resurrection-hallucination-or-vision
+      - https://www.catholic.com/magazine/online-edition/biblical-resurrection-reports-are-not-hopelessly-contradictory
+      - https://www.catholic.com/magazine/online-edition/did-jesus-claim-to-be-god
+      - https://www.catholic.com/magazine/online-edition/a-heresy-as-evidence-of-the-historical-jesus
+      - https://www.catholic.com/magazine/online-edition/five-mythical-myths-about-jesus
+      - https://www.catholic.com/magazine/print-edition/exposing-the-mithras-myth
+      - https://www.catholic.com/magazine/online-edition/new-support-for-the-cosmological-argument
+      - https://www.catholic.com/magazine/print-edition/five-ways-to-make-the-case-for-god
+      - https://www.catholic.com/magazine/print-edition/a-proof-of-the-existence-of-god
+      - https://www.catholic.com/magazine/online-edition/refuting-papal-myths-peter-was-not-a-pope
+      - https://www.catholic.com/magazine/online-edition/refuting-papal-myths-the-papacy-is-unbiblical-and-unhistorical
+      - https://www.catholic.com/magazine/online-edition/athanasius-and-the-myth-of-the-great-apostasy
+      - https://www.catholic.com/magazine/online-edition/the-myth-of-the-spanish-inquisition
