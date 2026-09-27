@@ -10,3 +10,6 @@ COLLECTION = "apologetics"
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 TOP_K = 8
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.1:8b")
+LLM_BACKEND = os.environ.get("LLM_BACKEND") or ("gemini" if GEMINI_API_KEY else "ollama")

@@ -4,11 +4,20 @@ import re
 from dataclasses import dataclass
 from functools import lru_cache
 
+import requests
 from google import genai
 from google.genai import types
 
 from . import store
-from .config import GEMINI_API_KEY, GEMINI_MODEL, ROOT_DIR, TOP_K
+from .config import (
+    GEMINI_API_KEY,
+    GEMINI_MODEL,
+    LLM_BACKEND,
+    OLLAMA_MODEL,
+    OLLAMA_URL,
+    ROOT_DIR,
+    TOP_K,
+)
 
 
 @dataclass
@@ -73,20 +82,61 @@ def link_citations(text: str, hits: list[Hit]) -> str:
     return re.sub(r"\[(S\d+)\]", repl, text)
 
 
-def answer(user_text: str, k: int = TOP_K, client=None) -> Answer:
+def _generate_gemini(system: str, user: str, client=None) -> str:
     if not GEMINI_API_KEY:
         raise RuntimeError(
             "GEMINI_API_KEY is not set — get a free key at https://aistudio.google.com/apikey"
         )
-    hits = retrieve(user_text, k)
     client = client or genai.Client(api_key=GEMINI_API_KEY)
     response = client.models.generate_content(
         model=GEMINI_MODEL,
-        contents=build_user_message(user_text, hits),
+        contents=user,
         config=types.GenerateContentConfig(
-            system_instruction=_system_prompt(),
+            system_instruction=system,
             max_output_tokens=4000,
         ),
     )
-    text = response.text or ""
-    return Answer(link_citations(text, hits), hits, GEMINI_MODEL)
+    return response.text or ""
+
+
+def _generate_ollama(system: str, user: str) -> str:
+    try:
+        response = requests.post(
+            f"{OLLAMA_URL.rstrip('/')}/api/chat",
+            json={
+                "model": OLLAMA_MODEL,
+                "stream": False,
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+                "options": {"num_ctx": 16384, "temperature": 0.3},
+            },
+            timeout=600,
+        )
+    except requests.ConnectionError as exc:
+        raise RuntimeError(
+            "Ollama is not running. Install it from https://ollama.com/download, "
+            "then run `ollama serve` (it usually starts automatically)."
+        ) from exc
+    if response.status_code == 404 or "model not found" in response.text.lower():
+        raise RuntimeError(
+            f"Model {OLLAMA_MODEL} is not downloaded. Run: ollama pull {OLLAMA_MODEL}"
+        )
+    response.raise_for_status()
+    return response.json()["message"]["content"]
+
+
+def answer(user_text: str, k: int = TOP_K, client=None, backend: str = LLM_BACKEND) -> Answer:
+    hits = retrieve(user_text, k)
+    user = build_user_message(user_text, hits)
+    system = _system_prompt()
+    if backend == "gemini":
+        text = _generate_gemini(system, user, client)
+        model = GEMINI_MODEL
+    elif backend == "ollama":
+        text = _generate_ollama(system, user)
+        model = f"ollama/{OLLAMA_MODEL}"
+    else:
+        raise RuntimeError(f"Unsupported LLM_BACKEND: {backend}")
+    return Answer(link_citations(text, hits), hits, model)
